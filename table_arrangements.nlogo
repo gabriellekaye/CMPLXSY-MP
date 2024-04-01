@@ -13,6 +13,7 @@ end
 to go
  ask turtles [
 
+    ;print count turtles
     (ifelse
       status = "entering" [
         enter_door
@@ -23,6 +24,7 @@ to go
       ]
       status = "waiting" [
         print word "ako ay " status
+        print word "waiting_time"  waiting_time
         set waiting_time (waiting_time - 2)
         ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set status "exit_door"]
       ]
@@ -41,6 +43,7 @@ to go
       [])
  ]
  tick
+  every (random 100) [spawn_customer]
 end
 
 to initialize_layout
@@ -398,7 +401,11 @@ end
 
 to enter_door
   let door-patch one-of patches with [object_type = "door"]
-  let ahead-turtle one-of turtles-on patch-ahead 1
+  ;let turtleSize count customer
+
+  let ahead-turtle turtles-on patch-ahead 1
+
+
   if door-patch != nobody [
     ifelse ahead-turtle != nobody [
       ifelse [status] of ahead-turtle = "entering" [

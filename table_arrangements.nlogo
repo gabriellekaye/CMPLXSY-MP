@@ -1,5 +1,10 @@
-patches-own[ object_type table_num near_window? near_aircon? near_cr? pax available? number ]
-turtles-own [status eating_time waiting_time choice found_table table preferred_table_type happiness]
+globals[
+  flag-full?
+  waiting-queue
+]
+
+patches-own[ object_type near_window? near_aircon? near_cr? pax available? number ]
+turtles-own [status eating_time waiting_time found_table table preferred_table_type happiness waiting_number]
 breed [customer group]
 
 to start
@@ -7,7 +12,8 @@ to start
   initialize_layout
   starting_line
   reset-ticks
-
+  set flag-full? false
+  set waiting-queue []
 end
 
 to go
@@ -16,34 +22,40 @@ to go
     ;print count turtles
     (ifelse
       status = "entering" [
+        set color blue
         enter_door
       ]
 
       status = "finding" [
-        preference_table ;find their preferred table, random if no available
+        set color gray
+        preference_table preferred_table_type ;find their preferred table, random if no available
       ]
       status = "waiting" [
+        set color blue
         print word "ako ay " status
         print word "waiting_time"  waiting_time
-        set waiting_time (waiting_time - 2)
-        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set status "exit_door"]
+
+        set waiting_time (waiting_time - 1)
+        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set color red exit_door]
       ]
       status = "sitting"[
 
       ]
 
       status = "eating" [
+        set color yellow
         eat_at_table ; eat at table
       ]
 
       status = "exiting" [
+        set color gray
         exit_door ; leave
       ]
 
       [])
   ]
   tick
-  every (random 10) [spawn_customer]
+  every (random 20) [spawn_customer]
 end
 
 to initialize_layout
@@ -253,12 +265,12 @@ to init_sofa [x y num nearWindow nearAircon nearCR]
     set pcolor brown
   ]
  let selected-patches patches with [
-    (pxcor = (x - max-pxcor) and pycor = (y - max-pycor)) or
+  ;  (pxcor = (x - max-pxcor) and pycor = (y - max-pycor)) or
     (pxcor = (x - max-pxcor) and pycor = ((y + 1) - max-pycor)) or
     (pxcor = (x - max-pxcor) and pycor = ((y + 2) - max-pycor)) or
     (pxcor = ((x + 1) - max-pxcor) and pycor = (y - max-pycor)) or
-    (pxcor = ((x + 2) - max-pxcor) and pycor = (y - max-pycor)) or
-    (pxcor = ((x + 3) - max-pxcor) and pycor = (y - max-pycor))
+    (pxcor = ((x + 2) - max-pxcor) and pycor = (y - max-pycor))
+  ;  (pxcor = ((x + 3) - max-pxcor) and pycor = (y - max-pycor))
  ]
 
  ask selected-patches [
@@ -271,6 +283,14 @@ to init_sofa [x y num nearWindow nearAircon nearCR]
     set available? true
     set number num
  ]
+
+  ask patches with [
+    (pxcor = (x - max-pxcor) and pycor = (y - max-pycor)) or
+    (pxcor = ((x + 3) - max-pxcor) and pycor = (y - max-pycor))
+  ][set pcolor white]
+
+
+
 end
 
 to init_static
@@ -394,13 +414,12 @@ to spawn_customer
       set color yellow
       set size 2
       set status "entering"
-      set eating_time 100 + random 50
-      set waiting_time 2 + random 50
-      set choice random 3
+      set eating_time 1000 + random 50
+      set waiting_time 1 + random 10
       set found_table FALSE
       set table nobody
       set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type
+      set preferred_table_type one-of ["near_window"] ; preferred table type ; "near_aircon" "near_cr"
     ]
   ]
 
@@ -416,11 +435,10 @@ to spawn_startCustomer [currentPatch]
       set status "entering"
       set eating_time 1 + random 50
       set waiting_time 1 + random 50
-      set choice random 3
       set found_table FALSE
       set table nobody
       set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type
+      set preferred_table_type one-of ["near_window"] ; preferred table type ; "near_aircon" "near_cr"
     ]
   ]
 end
@@ -494,9 +512,12 @@ end
 to find_table [chair_type]
 
   if (not found_table)[
+
     set table one-of patches with [available? = true]
     print word "available pba lahat? " table
     ifelse table != nobody[
+      set flag-full? false
+      clear-output
       set table one-of patches with [object_type = chair_type and available? = true]
       let chosen-seat table
 
@@ -514,6 +535,11 @@ to find_table [chair_type]
       ;print word "table " [number] of table
       ask chosen-seat [set available? false]
     ][
+      if not flag-full?[
+        output-print "canteen is full"
+        set flag-full? true
+      ]
+
       set status "waiting"
     ]
 
@@ -561,11 +587,9 @@ to exit_door
   fd 1
 end
 
-to preference_table
+to preference_table [preferred_table]
 
-  if choice = 0 [find_table "sofa"]
-  if choice = 1 [find_table "2-table"]
-  if choice = 2 [find_table "4-table"]
+  find_table preferred_table
 end
 
 to starting_line
@@ -688,6 +712,13 @@ NIL
 NIL
 NIL
 1
+
+OUTPUT
+530
+495
+758
+535
+21
 
 @#$#@#$#@
 ## WHAT IS IT?

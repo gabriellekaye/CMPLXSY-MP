@@ -1,17 +1,17 @@
-patches-own[ object_type near_window? near_aircon? near_cr? pax available? number]
+patches-own[ object_type table_num near_window? near_aircon? near_cr? pax available? number ]
 turtles-own [status eating_time waiting_time choice found_table table preferred_table_type happiness]
 breed [customer group]
 
 to start
   clear-all
   initialize_layout
-  spawn_customer
+  starting_line
   reset-ticks
 
 end
 
 to go
- ask turtles [
+  ask turtles [
 
     ;print count turtles
     (ifelse
@@ -41,9 +41,9 @@ to go
       ]
 
       [])
- ]
- tick
-  every (random 100) [spawn_customer]
+  ]
+  tick
+  every (random 10) [spawn_customer]
 end
 
 to initialize_layout
@@ -296,6 +296,10 @@ to init_static
     set object_type "customer_area"
   ]
 
+  ask patches with [
+    (pycor = -13 and pxcor = -24)
+  ][ set object_type "customer_spawnArea"]
+
   ; Setup the door
   ask patches with [
     (pxcor = (max-pxcor - 4) and pycor = (4 - max-pycor)) or
@@ -381,8 +385,30 @@ end
 ;;;;;;;;;     CUSTOMERS     ;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to spawn_customer
-  ask one-of patches with [object_type = "customer_area"] [
-    sprout 1 + random 4 [
+  let currentPatch one-of patches with [object_type = "customer_spawnArea"]
+  ask currentPatch [
+    print currentPatch
+    sprout 1 [
+      set breed customer
+      set shape "person"
+      set color yellow
+      set size 2
+      set status "entering"
+      set eating_time 100 + random 50
+      set waiting_time 2 + random 50
+      set choice random 3
+      set found_table FALSE
+      set table nobody
+      set happiness random 5 + 1  ; happiness random number from 1-5
+      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type
+    ]
+  ]
+
+end
+
+to spawn_startCustomer [currentPatch]
+  ask currentPatch [
+    sprout 1 [
       set breed customer
       set shape "person"
       set color yellow
@@ -403,27 +429,20 @@ to enter_door
   let door-patch one-of patches with [object_type = "door"]
   ;let turtleSize count customer
 
-  let ahead-turtle turtles-on patch-ahead 1
+  let ahead patch-ahead 1
 
 
   if door-patch != nobody [
-    ifelse ahead-turtle != nobody [
-      ifelse [status] of ahead-turtle = "entering" [
-        ; If there's a turtle in front of the door and it's entering, wait behind it
-        face ahead-turtle
-        if distance ahead-turtle < 2 [
-          ; Wait behind the turtle
-          set status "waiting"
-        ]
-      ] [
-        ; If there's a turtle in front of the door but it's not entering, continue moving towards the door
-        face door-patch
-        if distance door-patch < 1 [
-          set status "finding"
-        ]
+    ifelse any? other turtles-here and [status] of turtles-here = "entering" [
+      ; If there's a turtle in front of the door and it's entering, wait behind it
+      face one-of turtles-on ahead
+      if distance one-of turtles-on ahead < 2 [
+        ; Wait behind the turtle
+        wait 5
+        print "hello"
       ]
     ] [
-      ; If there's no turtle in front of the door, continue moving towards the door
+      ; If there's a turtle in front of the door but it's not entering, continue moving towards the door
       face door-patch
       if distance door-patch < 1 [
         set status "finding"
@@ -432,6 +451,45 @@ to enter_door
   ]
   fd 1
 end
+
+;to find_table [chair_type]
+;
+;  if (not found_table)[
+;    set table one-of patches with [available? = true]
+;    print word "available pba lahat? " table
+;    ifelse table != nobody [ ;if the canteen has available seat
+;      set table one-of patches with [object_type = chair_type and available? = true]
+;
+;      let chosen-seat table
+;
+;      print word "table" table
+;      if table = nobody[ ; if the customer is not able to choose their preference, table loop until random table found
+;        print "inside nobody"
+;        ;randomized_table
+;        while [table = nobody][
+;          set table one-of patches with [available? = true]
+;          set chosen-seat table
+;          ;print word "table " table
+;        ]
+;      ]
+;      set found_table TRUE
+;      ;print word "table " [number] of table
+;      ask chosen-seat [set available? false]
+;    ][
+;      set status "waiting"
+;    ]
+;
+;
+;  ]
+;  if table != nobody[
+;    face table
+;    if distance table < 1 [
+;      set status "eating"
+;    ]
+;    fd 1
+;  ]
+;
+;end
 
 to find_table [chair_type]
 
@@ -459,16 +517,18 @@ to find_table [chair_type]
       set status "waiting"
     ]
 
-
   ]
   if table != nobody[
     face table
     if distance table < 1 [
       set status "eating"
     ]
-  fd 1]
+    fd 1
+  ]
 
 end
+
+
 
 to eat_at_table
   let chosen-seat table
@@ -501,12 +561,44 @@ to exit_door
   fd 1
 end
 
-
 to preference_table
 
   if choice = 0 [find_table "sofa"]
   if choice = 1 [find_table "2-table"]
   if choice = 2 [find_table "4-table"]
+end
+
+to starting_line
+    let y  -13
+  let x  -14
+  spawn_startCustomer patches with [pycor = y and pxcor = x ]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 1]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 2]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 3]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 4]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 5]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 6]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 7]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 8]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 9]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 10]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 11]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 12]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 13]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 14]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 15]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 16]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 17]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 18]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 19]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 20]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 21]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 22]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 23]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 24]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 25]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 26]
+  spawn_startCustomer patches with [pycor = y and pxcor = x + 27]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW

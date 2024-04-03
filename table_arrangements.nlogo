@@ -1,57 +1,58 @@
 globals[
   flag-full?
-  waiting-queue
   group-index
   total-happiness
   seated-counter
+  average-happiness
 ]
 
 patches-own[ object_type near_window? near_aircon? near_cr? pax available? number occupied_group_num seat_taken? ]
-turtles-own [status eating_time waiting_time found_table seat preferred_table_type happiness group_num]
+turtles-own [status eating_time waiting_time found_table seat preferred_table_type happiness group_num chosen_table_num leader?]
 breed [customer group]
 
 to start
   clear-all
   initialize_layout
-  ;starting_line
   reset-ticks
   set flag-full? false
-  set waiting-queue []
   set group-index 1
   set total-happiness 0
   set seated-counter 0
+;  spawn_random_customer
 end
 
 to go
-  if ticks = 5000 [ stop]
+
+  if ticks = 5000 [ set average-happiness total-happiness / seated-counter stop ]
   ask turtles [
 
-    ;print count turtles
     set label group_num
     set label-color blue
     (ifelse
       status = "entering" [
         set color blue
-        preference_table preferred_table_type
-        enter_door
+        ;preference_table preferred_table_type
+        choosing_table preferred_table_type
+        if(chosen_table_num != 0)[
+          enter_door
+        ]
+
       ]
 
       status = "finding" [
         set color gray
-        ;set label preferred_table_type
+     ;   set label preferred_table_type
         walk_to_table ;find their preferred table, random if no available
       ]
+
       status = "waiting" [
         set color blue
-        print word "ako ay " status
-        print word "waiting_time"  waiting_time
-
-        let current_grpnum group_num
-        ask customer with[ group_num = current_grpnum][set waiting_time waiting_time - 1]
-        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set color red exit_door  ask customer with[group_num = current_grpnum][set happiness max (list (happiness - random 3 + 1) 0)]]
-      ]
-      status = "sitting"[
-
+        ;print word "ako ay " status
+        ;print word "waiting_time"  waiting_time
+        ;let current_grpnum group_num
+        ;ask customer with[ group_num = current_grpnum][]
+        set waiting_time waiting_time - 1
+        ifelse waiting_time > 0 [ set status "waiting" ][ set color red exit_door]
       ]
 
       status = "eating" [
@@ -65,10 +66,13 @@ to go
       ]
 
       [])
+
   ]
   tick
   ;every (random 20) [starting_line]
-  every (random 20) [spawn_random_customer]
+  every (random interval-spawn-customer) [
+    spawn_random_customer
+  ]
   ;every (random 20) [spawn_customer]
 
 end
@@ -83,8 +87,6 @@ to initialize_layout
     ]
     [])
 end
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;     LAYOUTS     ;;;;;;;;;;;;
@@ -161,23 +163,23 @@ to init_layout_2
 
   init_sofa 1 7 1 true false false
   init_sofa 1 12 2 false false false
-  init_sofa 1 17 3 false false false
-  init_sofa 1 22 4 false false false
-  init_sofa 1 27 5 false false false
+  init_sofa 1 17 3 false true false
+  init_sofa 1 22 4 false true false
+  init_sofa 1 27 5 false true false
 
-  init_regtable (max-pxcor + 6) 6 6 false false false
-  init_regtable (max-pxcor - 8) 6 7 false false false
-  init_regtable (max-pxcor + 6) -4 8 false false false
-  init_regtable (max-pxcor - 8) -4 9 false false false
+  init_regtable (max-pxcor + 8) 6 6 false false false
+  init_regtable (max-pxcor - 8) 6 7 false true false
+  init_regtable (max-pxcor + 8) -4 8 false false false
+  init_regtable (max-pxcor - 8) -4 9 true true false
 
   init_doubletable -1 6 10 false false false
-  init_doubletable -1 -4 11 false false false
+  init_doubletable -1 -4 11 true false false
 
-  init_doubletable 13 6 12 false false false
-  init_doubletable 13 -4 13 false false false
+  init_doubletable 15 6 12 false true true
+  init_doubletable 15 -4 13 false true true
 
   init_doubletable -15 6 14 false false false
-  init_doubletable -15 -4 15 false false false
+  init_doubletable -15 -4 15 true false false
 
   init_static
 
@@ -194,11 +196,11 @@ to init_layout_2
 
   ;Setup Aircon
   ask patches with [
-    (pxcor = (7) and pycor = (max-pycor)) or
-    (pxcor = (8) and pycor = (max-pycor)) or
-    (pxcor = (9) and pycor = (max-pycor)) or
     (pxcor = (10) and pycor = (max-pycor)) or
-    (pxcor = (11) and pycor = (max-pycor))
+    (pxcor = (11) and pycor = (max-pycor)) or
+    (pxcor = (12) and pycor = (max-pycor)) or
+    (pxcor = (13) and pycor = (max-pycor)) or
+    (pxcor = (14) and pycor = (max-pycor))
   ] [
     set pcolor gray
     set object_type "aircon"
@@ -206,11 +208,11 @@ to init_layout_2
 
   ;Setup Aircon
   ask patches with [
-    (pxcor = (-7) and pycor = (max-pycor)) or
-    (pxcor = (-8) and pycor = (max-pycor)) or
-    (pxcor = (-9) and pycor = (max-pycor)) or
-    (pxcor = (-10) and pycor = (max-pycor)) or
-    (pxcor = (-11) and pycor = (max-pycor))
+    (pxcor = (-19) and pycor = (max-pycor)) or
+    (pxcor = (-20) and pycor = (max-pycor)) or
+    (pxcor = (-21) and pycor = (max-pycor)) or
+    (pxcor = (-22) and pycor = (max-pycor)) or
+    (pxcor = (-23) and pycor = (max-pycor))
   ] [
     set pcolor gray
     set object_type "aircon"
@@ -426,19 +428,22 @@ end
 ;;;;;;;;;     CUSTOMERS     ;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to spawn_solo_customer
-  temp_spawn
+  let preferred one-of ["near_window" "near_aircon" "near_cr" "sofa_seat"]
+  temp_spawn preferred true
 end
 
 to spawn_group2_customer
-  temp_spawn
-  temp_spawn
+  let preferred one-of ["near_window" "near_aircon" "near_cr" "sofa_seat"]
+  temp_spawn preferred true
+  temp_spawn preferred false
 end
 
 to spawn_group4_customer
-  temp_spawn
-  temp_spawn
-  temp_spawn
-  temp_spawn
+  let preferred one-of ["near_window" "near_aircon" "near_cr" "sofa_seat"]
+  temp_spawn preferred true
+  temp_spawn preferred false
+  temp_spawn preferred false
+  temp_spawn preferred false
 end
 
 to spawn_random_customer
@@ -452,60 +457,29 @@ to spawn_random_customer
 
 end
 
-to temp_spawn
+to temp_spawn [preference is_leader?]
+
   let currentPatch one-of patches with [object_type = "customer_spawnArea"]
   ask currentPatch [
-    print currentPatch
     sprout 1 [
       set breed customer
       set shape "person"
       set color yellow
       set size 2
       set status "entering"
-      set eating_time 500
-      set waiting_time 1 + random 10
+      set eating_time eating-time
+      set waiting_time 10
       set found_table FALSE
       set seat nobody
       set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
+      set preferred_table_type preference
+      ;set preferred_table_type one-of ["near_window" "near_aircon" "near_cr" "sofa_seat"] ; preferred table type
+      set chosen_table_num 0
       set group_num group-index
+      set leader? is_leader?
     ]
   ]
 end
-
-;to enter_door
-;  let door-patch one-of patches with [object_type = "door"]
-;  ;let turtleSize count customer
-;
-;  let ahead-turtle turtles-on patch-ahead 1
-;
-;
-;  if door-patch != nobody [
-;    ifelse ahead-turtle != nobody [
-;      ifelse [status] of ahead-turtle = "entering" [
-;        ; If there's a turtle in front of the door and it's entering, wait behind it
-;        face ahead-turtle
-;        if distance ahead-turtle < 2 [
-;          ; Wait behind the turtle
-;          set status "waiting"
-;        ]
-;      ] [
-;        ; If there's a turtle in front of the door but it's not entering, continue moving towards the door
-;        face door-patch
-;        if distance door-patch < 1 [
-;          set status "finding"
-;        ]
-;      ]
-;    ] [
-;      ; If there's no turtle in front of the door, continue moving towards the door
-;      face door-patch
-;      if distance door-patch < 1 [
-;        set status "finding"
-;      ]
-;    ]
-;  ]
-;  fd 1
-;end
 
 to enter_door
   let door-patch one-of patches with [object_type = "door"]
@@ -521,90 +495,109 @@ to enter_door
   fd 1
 end
 
-;to find_table [chair_type]
-;
-;  if (not found_table)[
-;    set table one-of patches with [available? = true]
-;    print word "available pba lahat? " table
-;    ifelse table != nobody [ ;if the canteen has available seat
-;      set table one-of patches with [object_type = chair_type and available? = true]
-;
-;      let chosen-seat table
-;
-;      print word "table" table
-;      if table = nobody[ ; if the customer is not able to choose their preference, table loop until random table found
-;        print "inside nobody"
-;        ;randomized_table
-;        while [table = nobody][
-;          set table one-of patches with [available? = true]
-;          set chosen-seat table
-;          ;print word "table " table
-;        ]
-;      ]
-;      set found_table TRUE
-;      ;print word "table " [number] of table
-;      ask chosen-seat [set available? false]
-;    ][
-;      set status "waiting"
-;    ]
-;
-;
-;  ]
-;  if table != nobody[
-;    face table
-;    if distance table < 1 [
-;      set status "eating"
-;    ]
-;    fd 1
-;  ]
-;
-;end
+to choosing_table [preference]
+  ;preference = "near_window" "near_aircon" "near_cr" "sofa_seat"
+  ;pax_in_group = number of customers in a group
+  let pax_in_group 0
+  let current_customer_group_num group_num
+  ask customer with [ group_num = current_customer_group_num ][
+    set pax_in_group pax_in_group + 1
+  ]
 
-to find_table [chair_type]
 
-  if (not found_table)[
 
-    set seat one-of patches with [available? = true]
-    print word "available pba lahat? " seat
-    ifelse seat != nobody[
-      set flag-full? false
-      clear-output
-      set seat one-of patches with [object_type = chair_type and available? = true]
-      let chosen-seat seat
+  ifelse(not found_table)[
 
-      print word "table" seat
-      if seat = nobody[
-        print "inside nobody"
-        ;randomized_table
-        while [seat = nobody][
-          set seat one-of patches with [available? = true]
-          set chosen-seat seat
-          ;print word "table " table
-        ]
-      ]
-      set seat_taken? true
-      let current_table_number 0
-      ask seat [set current_table_number number]
-      let current_group_customer group_num
-      ask customer with [group_num = current_group_customer][
-        set found_table TRUE
-        set seat one-of patches with [number = current_table_number and available? = true and seat_taken? = false]
-        set seat_taken? true
-      ]
-      set seated-counter seated-counter + 1
-      update_table current_table_number group_num false
-      ;print word "table " [number] of table
-    ][
+    let has_available_seats one-of patches with [available? = true and pax >= pax_in_group]
+    ifelse has_available_seats = nobody[
+
+      ;if wala ng available seats
       if not flag-full?[
         output-print "canteen is full"
         set flag-full? true
       ]
 
       set status "waiting"
+    ][
+      set flag-full? false
+      clear-output
+      ;if merong available seats
+      let available_seats patches with [available? = true and pax >= pax_in_group]
+      let preferred_available_seats nobody
+
+      (ifelse
+        preference = "near_window" [
+          set preferred_available_seats available_seats with [ near_window? = true ]
+        ]
+
+        preference = "near_aircon" [
+          set preferred_available_seats available_seats with [ near_aircon? = true ]
+        ]
+
+        preference = "near_cr" [
+          ;ayaw nila malapit sa cr
+          set preferred_available_seats available_seats with [ near_cr? = false ]
+        ]
+
+        preference = "sofa_seat" [
+          set preferred_available_seats available_seats with [ object_type = "sofa" ]
+        ]
+      [])
+
+;      let chosen-seat one-of available_seats
+;      to_set_chosen_table chosen-seat
+
+      ifelse preferred_available_seats = nobody[
+        ;walang nahanap na preferred table
+        let chosen-seat one-of available_seats
+        to_set_chosen_table chosen-seat
+      ][
+        ;may nahanap na preferred table
+        let chosen-seat one-of preferred_available_seats
+
+        ifelse chosen-seat = nobody [
+          set chosen-seat one-of available_seats
+          to_set_chosen_table chosen-seat
+        ][
+          to_set_chosen_table chosen-seat
+        ]
+      ]
+    ]
+
+    set seated-counter seated-counter + 1
+  ][
+    ;may nahanap na grp nila na table
+    if chosen_table_num != 0[
+      ;may napili na yung group nila
+
+      let chosen_table chosen_table_num
+      let current_group_num_of_minion group_num
+
+      let avail_seat_to_take one-of patches with [ number = chosen_table and seat_taken? = false ]
+      set seat avail_seat_to_take
+;      ask avail_seat_to_take [
+       set seat_taken? true
+;      ]
     ]
 
   ]
+end
 
+to to_set_chosen_table [chosen-seat]
+  let current_table_number 0
+
+  ;kuha ng chosen table num
+  ask chosen-seat [set current_table_number number]
+  set chosen_table_num current_table_number ;para sa leader
+
+  let current_group_num_of_leader group_num
+  ask customer with [group_num = current_group_num_of_leader][
+    set chosen_table_num current_table_number
+    set found_table TRUE
+  ]
+  let avail_seat_to_take one-of patches with [ number = current_table_number and seat_taken? = false ]
+  set seat avail_seat_to_take
+  update_table current_table_number group_num false
 end
 
 to walk_to_table
@@ -619,15 +612,49 @@ to eat_at_table
   let chosen-seat seat
   let current_grpnum group_num
   ifelse chosen-seat != nobody [
-    ifelse [object_type] of chosen-seat = preferred_table_type [
-      ask customer with[group_num = current_grpnum][set happiness min (list (happiness + 2) 5)] ; max 5 happiness
-    ] [ ; not preferred table minus 1-3 randomly
-      ask customer with[group_num = current_grpnum][set happiness max (list (happiness - random 3 + 1) 0)] ; min 0 happiness
-    ]
+
     ifelse eating_time = 0 [
       let current_table_number 0
       ask chosen-seat [set current_table_number number]
       update_table current_table_number group_num true
+      let chosen_preferred false
+
+      (ifelse
+        preferred_table_type = "near_window" [
+          if [near_window?] of chosen-seat = true[
+            set chosen_preferred true
+          ]
+        ]
+
+        preferred_table_type = "near_aircon" [
+          if [near_aircon?] of chosen-seat = true[
+            set chosen_preferred true
+          ]
+
+        ]
+
+        preferred_table_type = "near_cr" [
+          ;ayaw nila malapit sa cr
+          if [near_cr?] of chosen-seat = false[
+            set chosen_preferred true
+          ]
+        ]
+        preferred_table_type = "sofa_seat" [
+          if [object_type] of chosen-seat = "sofa"[
+              set chosen_preferred true
+          ]
+        ]
+        [])
+
+
+      ifelse chosen_preferred [
+        ask customer with[group_num = current_grpnum][set happiness min (list (happiness + 2) 5)] ; max 5 happiness
+        ;print word "HAPPY" happiness
+      ] [ ; not preferred table minus 1-3 randomly
+        ask customer with[group_num = current_grpnum][set happiness max (list (happiness - (random 3 + 1)) 1)] ; min 0 happiness
+        ;print word "SAD" happiness
+      ]
+
 
       set status "exiting"
       ;ask chosen-seat [set available? true]
@@ -645,106 +672,22 @@ to exit_door
   if door-patch != nobody [
     face door-patch
     if distance door-patch < 1 [
-      set total-happiness total-happiness + happiness
+      let current_grpnum group_num
+      if group_num = current_grpnum and leader? = true[ set total-happiness total-happiness + happiness
+      ]
       die
     ]
   ]
   fd 1
 end
 
-to preference_table [preferred_table]
-
-  find_table["sofa"]
-
-
-end
-
-to starting_line
-  let y  -13
-  let x  -14
-  spawn_startCustomer patches with [pycor = y and pxcor = x ]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 1]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 2]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 3]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 4]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 5]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 6]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 7]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 8]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 9]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 10]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 11]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 12]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 13]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 14]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 15]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 16]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 17]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 18]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 19]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 20]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 21]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 22]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 23]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 24]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 25]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 26]
-  spawn_startCustomer patches with [pycor = y and pxcor = x + 27]
-end
-
 to update_table [tablenum groupnum free?]
-
   let selected-patches patches with [
     number = tablenum
   ]
-
   ask selected-patches [
     set occupied_group_num groupnum
     set available? free?
-    set seat_taken? not free?
-  ]
-
-end
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;      BACKUP     ;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-to spawn_customer
-  let currentPatch one-of patches with [object_type = "customer_spawnArea"]
-  ask currentPatch [
-    print currentPatch
-    sprout 1 [
-      set breed customer
-      set shape "person"
-      set color yellow
-      set size 2
-      set status "entering"
-      set eating_time 1000 + random 50
-      set waiting_time 1 + random 10
-      set found_table FALSE
-      set seat nobody
-      set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
-    ]
-  ]
-
-end
-
-to spawn_startCustomer [currentPatch]
-  ask currentPatch [
-    sprout 1 [
-      set breed customer
-      set shape "person"
-      set color yellow
-      set size 2
-      set status "entering"
-      set eating_time 1000 + random 50
-      set waiting_time 1 + random 50
-      set found_table FALSE
-      set seat nobody
-      set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
-    ]
   ]
 end
 @#$#@#$#@
@@ -800,7 +743,7 @@ CHOOSER
 table_layout
 table_layout
 1 2
-1
+0
 
 BUTTON
 106
@@ -820,9 +763,9 @@ NIL
 1
 
 BUTTON
-180
+181
 48
-274
+275
 81
 go_forever
 go
@@ -844,26 +787,56 @@ OUTPUT
 21
 
 MONITOR
-30
-210
-211
-255
-total number of seated groups
+977
+388
+1148
+437
+average happiness level
+average-happiness
+5
+1
+12
+
+MONITOR
+977
+307
+1219
+356
+total number of groups with table
 seated-counter
 17
 1
-11
+12
 
-MONITOR
-31
-262
-133
-307
-happiness value
-total-happiness
-17
+SLIDER
+53
+147
+240
+180
+interval-spawn-customer
+interval-spawn-customer
+10
+100
+10.0
+5
 1
-11
+NIL
+HORIZONTAL
+
+SLIDER
+62
+190
+234
+223
+eating-time
+eating-time
+100
+1000
+100.0
+100
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

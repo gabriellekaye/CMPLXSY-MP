@@ -2,6 +2,8 @@ globals[
   flag-full?
   waiting-queue
   group-index
+  total-happiness
+  seated-counter
 ]
 
 patches-own[ object_type near_window? near_aircon? near_cr? pax available? number occupied_group_num seat_taken? ]
@@ -16,32 +18,37 @@ to start
   set flag-full? false
   set waiting-queue []
   set group-index 1
+  set total-happiness 0
+  set seated-counter 0
 end
 
 to go
+  if ticks = 5000 [ stop]
   ask turtles [
 
     ;print count turtles
     set label group_num
-    set label-color black
+    set label-color blue
     (ifelse
       status = "entering" [
         set color blue
+        preference_table preferred_table_type
         enter_door
       ]
 
       status = "finding" [
         set color gray
         ;set label preferred_table_type
-        preference_table preferred_table_type ;find their preferred table, random if no available
+        walk_to_table ;find their preferred table, random if no available
       ]
       status = "waiting" [
         set color blue
         print word "ako ay " status
         print word "waiting_time"  waiting_time
 
-        set waiting_time (waiting_time - 1)
-        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko 😠 " set color red exit_door]
+        let current_grpnum group_num
+        ask customer with[ group_num = current_grpnum][set waiting_time waiting_time - 1]
+        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set color red exit_door  ask customer with[group_num = current_grpnum][set happiness max (list (happiness - random 3 + 1) 0)]]
       ]
       status = "sitting"[
 
@@ -63,6 +70,7 @@ to go
   ;every (random 20) [starting_line]
   every (random 20) [spawn_random_customer]
   ;every (random 20) [spawn_customer]
+
 end
 
 to initialize_layout
@@ -330,7 +338,7 @@ to init_static
   ]
 
   ask patches with [
-    (pycor = -13 and pxcor = -24)
+    (pycor = -13 and pxcor = 18)
   ][ set object_type "customer_spawnArea"]
 
   ; Setup the door
@@ -455,7 +463,7 @@ to temp_spawn
       set size 2
       set status "entering"
       set eating_time 500
-      set waiting_time 10
+      set waiting_time 1 + random 10
       set found_table FALSE
       set seat nobody
       set happiness random 5 + 1  ; happiness random number from 1-5
@@ -574,14 +582,16 @@ to find_table [chair_type]
           ;print word "table " table
         ]
       ]
-      ;set seat_taken? true
+      set seat_taken? true
       let current_table_number 0
       ask seat [set current_table_number number]
       let current_group_customer group_num
       ask customer with [group_num = current_group_customer][
         set found_table TRUE
         set seat one-of patches with [number = current_table_number and available? = true and seat_taken? = false]
+        set seat_taken? true
       ]
+      set seated-counter seated-counter + 1
       update_table current_table_number group_num false
       ;print word "table " [number] of table
     ][
@@ -594,25 +604,25 @@ to find_table [chair_type]
     ]
 
   ]
-  if seat != nobody[
-    face seat
-    if distance seat < 1 [
-      set status "eating"
-    ]
-    fd 1
-  ]
 
 end
 
-
+to walk_to_table
+  face seat
+  if distance seat < 1 [
+    set status "eating"
+  ]
+fd 1
+end
 
 to eat_at_table
   let chosen-seat seat
+  let current_grpnum group_num
   ifelse chosen-seat != nobody [
     ifelse [object_type] of chosen-seat = preferred_table_type [
-      set happiness min (list (happiness + 2) 5) ; max 5 happiness
+      ask customer with[group_num = current_grpnum][set happiness min (list (happiness + 2) 5)] ; max 5 happiness
     ] [ ; not preferred table minus 1-3 randomly
-      set happiness max (list (happiness - random 3 + 1) 0) ; min 0 happiness
+      ask customer with[group_num = current_grpnum][set happiness max (list (happiness - random 3 + 1) 0)] ; min 0 happiness
     ]
     ifelse eating_time = 0 [
       let current_table_number 0
@@ -623,7 +633,7 @@ to eat_at_table
       ;ask chosen-seat [set available? true]
     ]
     [
-      set eating_time (eating_time - 1)
+      ask customer with[group_num = current_grpnum][set eating_time (eating_time - 1)]
     ]
   ] [
     set status "waiting" ; No table found, wait
@@ -635,6 +645,7 @@ to exit_door
   if door-patch != nobody [
     face door-patch
     if distance door-patch < 1 [
+      set total-happiness total-happiness + happiness
       die
     ]
   ]
@@ -789,7 +800,7 @@ CHOOSER
 table_layout
 table_layout
 1 2
-0
+1
 
 BUTTON
 106
@@ -831,6 +842,28 @@ OUTPUT
 758
 535
 21
+
+MONITOR
+30
+210
+211
+255
+total number of seated groups
+seated-counter
+17
+1
+11
+
+MONITOR
+31
+262
+133
+307
+happiness value
+total-happiness
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

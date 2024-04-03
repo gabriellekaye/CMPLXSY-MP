@@ -1,25 +1,29 @@
 globals[
   flag-full?
   waiting-queue
+  group-index
 ]
 
-patches-own[ object_type near_window? near_aircon? near_cr? pax available? number ]
-turtles-own [status eating_time waiting_time found_table table preferred_table_type happiness waiting_number]
+patches-own[ object_type near_window? near_aircon? near_cr? pax available? number occupied_group_num seat_taken? ]
+turtles-own [status eating_time waiting_time found_table seat preferred_table_type happiness group_num]
 breed [customer group]
 
 to start
   clear-all
   initialize_layout
-  starting_line
+  ;starting_line
   reset-ticks
   set flag-full? false
   set waiting-queue []
+  set group-index 1
 end
 
 to go
   ask turtles [
 
     ;print count turtles
+    set label group_num
+    set label-color black
     (ifelse
       status = "entering" [
         set color blue
@@ -28,6 +32,7 @@ to go
 
       status = "finding" [
         set color gray
+        ;set label preferred_table_type
         preference_table preferred_table_type ;find their preferred table, random if no available
       ]
       status = "waiting" [
@@ -36,7 +41,7 @@ to go
         print word "waiting_time"  waiting_time
 
         set waiting_time (waiting_time - 1)
-        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko >:( " set color red exit_door]
+        ifelse waiting_time > 0 [set status " finding" ][print "tagal!! alis na ko 😠 " set color red exit_door]
       ]
       status = "sitting"[
 
@@ -55,7 +60,9 @@ to go
       [])
   ]
   tick
-  every (random 20) [spawn_customer]
+  ;every (random 20) [starting_line]
+  every (random 20) [spawn_random_customer]
+  ;every (random 20) [spawn_customer]
 end
 
 to initialize_layout
@@ -87,17 +94,17 @@ to init_layout_1
   init_sofa 19 6 4 true false false
   init_sofa 25 6 5 true false false
 
-  init_regtable 7 10 1 false false false
-  init_regtable 15 10 2 false false false
-  init_regtable 15 0 3 false false false
-  init_regtable 7 0 4 false false false
+  init_regtable 7 10 6 false false false
+  init_regtable 15 10 7 false false false
+  init_regtable 15 0 8 false true false
+  init_regtable 7 0 9 false true false
 
-  init_doubletable 4 10 1 false false false
-  init_doubletable 9 10 2 false false false
-  init_doubletable 14 10 3 false false false
-  init_doubletable 4 0 4 false false false
-  init_doubletable 9 0 5 false false false
-  init_doubletable 14 0 6 false false false
+  init_doubletable 4 10 10 false false false
+  init_doubletable 9 10 11 false true false
+  init_doubletable 14 10 12 false false false
+  init_doubletable 4 0 13 false false false
+  init_doubletable 9 0 14 false true false
+  init_doubletable 14 0 15 false false true
 
   init_static
 
@@ -150,19 +157,19 @@ to init_layout_2
   init_sofa 1 22 4 false false false
   init_sofa 1 27 5 false false false
 
-  init_regtable (max-pxcor + 6) 6 1 false false false
-  init_regtable (max-pxcor - 8) 6 2 false false false
-  init_regtable (max-pxcor + 6) -4 3 false false false
-  init_regtable (max-pxcor - 8) -4 4 false false false
+  init_regtable (max-pxcor + 6) 6 6 false false false
+  init_regtable (max-pxcor - 8) 6 7 false false false
+  init_regtable (max-pxcor + 6) -4 8 false false false
+  init_regtable (max-pxcor - 8) -4 9 false false false
 
-  init_doubletable -1 6 1 false false false
-  init_doubletable -1 -4 2 false false false
+  init_doubletable -1 6 10 false false false
+  init_doubletable -1 -4 11 false false false
 
-  init_doubletable 13 6 3 false false false
-  init_doubletable 13 -4 4 false false false
+  init_doubletable 13 6 12 false false false
+  init_doubletable 13 -4 13 false false false
 
-  init_doubletable -15 6 5 false false false
-  init_doubletable -15 -4 6 false false false
+  init_doubletable -15 6 14 false false false
+  init_doubletable -15 -4 15 false false false
 
   init_static
 
@@ -232,6 +239,8 @@ to init_doubletable [x y num nearWindow nearAircon nearCR]
     set pax 2
     set available? true
     set number num
+    set occupied_group_num 0
+    set seat_taken? false
   ]
 
 end
@@ -257,6 +266,8 @@ to init_regtable [x y num nearWindow nearAircon nearCR]
     set pax 4
     set available? true
     set number num
+    set occupied_group_num 0
+    set seat_taken? false
   ]
 end
 
@@ -282,6 +293,8 @@ to init_sofa [x y num nearWindow nearAircon nearCR]
     set near_cr? nearCr
     set available? true
     set number num
+    set occupied_group_num 0
+    set seat_taken? false
  ]
 
   ask patches with [
@@ -404,7 +417,34 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;     CUSTOMERS     ;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-to spawn_customer
+to spawn_solo_customer
+  temp_spawn
+end
+
+to spawn_group2_customer
+  temp_spawn
+  temp_spawn
+end
+
+to spawn_group4_customer
+  temp_spawn
+  temp_spawn
+  temp_spawn
+  temp_spawn
+end
+
+to spawn_random_customer
+  let x random 3
+
+  if (x = 0)[spawn_solo_customer]
+  if (x = 1)[spawn_group2_customer]
+  if (x = 2)[spawn_group4_customer]
+
+  set group-index group-index + 1
+
+end
+
+to temp_spawn
   let currentPatch one-of patches with [object_type = "customer_spawnArea"]
   ask currentPatch [
     print currentPatch
@@ -414,57 +454,60 @@ to spawn_customer
       set color yellow
       set size 2
       set status "entering"
-      set eating_time 1000 + random 50
-      set waiting_time 1 + random 10
+      set eating_time 500
+      set waiting_time 10
       set found_table FALSE
-      set table nobody
+      set seat nobody
       set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window"] ; preferred table type ; "near_aircon" "near_cr"
-    ]
-  ]
-
-end
-
-to spawn_startCustomer [currentPatch]
-  ask currentPatch [
-    sprout 1 [
-      set breed customer
-      set shape "person"
-      set color yellow
-      set size 2
-      set status "entering"
-      set eating_time 1 + random 50
-      set waiting_time 1 + random 50
-      set found_table FALSE
-      set table nobody
-      set happiness random 5 + 1  ; happiness random number from 1-5
-      set preferred_table_type one-of ["near_window"] ; preferred table type ; "near_aircon" "near_cr"
+      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
+      set group_num group-index
     ]
   ]
 end
+
+;to enter_door
+;  let door-patch one-of patches with [object_type = "door"]
+;  ;let turtleSize count customer
+;
+;  let ahead-turtle turtles-on patch-ahead 1
+;
+;
+;  if door-patch != nobody [
+;    ifelse ahead-turtle != nobody [
+;      ifelse [status] of ahead-turtle = "entering" [
+;        ; If there's a turtle in front of the door and it's entering, wait behind it
+;        face ahead-turtle
+;        if distance ahead-turtle < 2 [
+;          ; Wait behind the turtle
+;          set status "waiting"
+;        ]
+;      ] [
+;        ; If there's a turtle in front of the door but it's not entering, continue moving towards the door
+;        face door-patch
+;        if distance door-patch < 1 [
+;          set status "finding"
+;        ]
+;      ]
+;    ] [
+;      ; If there's no turtle in front of the door, continue moving towards the door
+;      face door-patch
+;      if distance door-patch < 1 [
+;        set status "finding"
+;      ]
+;    ]
+;  ]
+;  fd 1
+;end
 
 to enter_door
   let door-patch one-of patches with [object_type = "door"]
   ;let turtleSize count customer
 
-  let ahead patch-ahead 1
-
-
   if door-patch != nobody [
-    ifelse any? other turtles-here and [status] of turtles-here = "entering" [
-      ; If there's a turtle in front of the door and it's entering, wait behind it
-      face one-of turtles-on ahead
-      if distance one-of turtles-on ahead < 2 [
-        ; Wait behind the turtle
-        wait 5
-        print "hello"
-      ]
-    ] [
-      ; If there's a turtle in front of the door but it's not entering, continue moving towards the door
-      face door-patch
-      if distance door-patch < 1 [
-        set status "finding"
-      ]
+    ; If there's no turtle in front of the door, continue moving towards the door
+    face door-patch
+    if distance door-patch < 1 [
+      set status "finding"
     ]
   ]
   fd 1
@@ -513,27 +556,34 @@ to find_table [chair_type]
 
   if (not found_table)[
 
-    set table one-of patches with [available? = true]
-    print word "available pba lahat? " table
-    ifelse table != nobody[
+    set seat one-of patches with [available? = true]
+    print word "available pba lahat? " seat
+    ifelse seat != nobody[
       set flag-full? false
       clear-output
-      set table one-of patches with [object_type = chair_type and available? = true]
-      let chosen-seat table
+      set seat one-of patches with [object_type = chair_type and available? = true]
+      let chosen-seat seat
 
-      print word "table" table
-      if table = nobody[
+      print word "table" seat
+      if seat = nobody[
         print "inside nobody"
         ;randomized_table
-        while [table = nobody][
-          set table one-of patches with [available? = true]
-          set chosen-seat table
+        while [seat = nobody][
+          set seat one-of patches with [available? = true]
+          set chosen-seat seat
           ;print word "table " table
         ]
       ]
-      set found_table TRUE
+      ;set seat_taken? true
+      let current_table_number 0
+      ask seat [set current_table_number number]
+      let current_group_customer group_num
+      ask customer with [group_num = current_group_customer][
+        set found_table TRUE
+        set seat one-of patches with [number = current_table_number and available? = true and seat_taken? = false]
+      ]
+      update_table current_table_number group_num false
       ;print word "table " [number] of table
-      ask chosen-seat [set available? false]
     ][
       if not flag-full?[
         output-print "canteen is full"
@@ -544,9 +594,9 @@ to find_table [chair_type]
     ]
 
   ]
-  if table != nobody[
-    face table
-    if distance table < 1 [
+  if seat != nobody[
+    face seat
+    if distance seat < 1 [
       set status "eating"
     ]
     fd 1
@@ -557,7 +607,7 @@ end
 
 
 to eat_at_table
-  let chosen-seat table
+  let chosen-seat seat
   ifelse chosen-seat != nobody [
     ifelse [object_type] of chosen-seat = preferred_table_type [
       set happiness min (list (happiness + 2) 5) ; max 5 happiness
@@ -565,8 +615,12 @@ to eat_at_table
       set happiness max (list (happiness - random 3 + 1) 0) ; min 0 happiness
     ]
     ifelse eating_time = 0 [
+      let current_table_number 0
+      ask chosen-seat [set current_table_number number]
+      update_table current_table_number group_num true
+
       set status "exiting"
-      ask chosen-seat [set available? true]
+      ;ask chosen-seat [set available? true]
     ]
     [
       set eating_time (eating_time - 1)
@@ -589,11 +643,13 @@ end
 
 to preference_table [preferred_table]
 
-  find_table preferred_table
+  find_table["sofa"]
+
+
 end
 
 to starting_line
-    let y  -13
+  let y  -13
   let x  -14
   spawn_startCustomer patches with [pycor = y and pxcor = x ]
   spawn_startCustomer patches with [pycor = y and pxcor = x + 1]
@@ -623,6 +679,62 @@ to starting_line
   spawn_startCustomer patches with [pycor = y and pxcor = x + 25]
   spawn_startCustomer patches with [pycor = y and pxcor = x + 26]
   spawn_startCustomer patches with [pycor = y and pxcor = x + 27]
+end
+
+to update_table [tablenum groupnum free?]
+
+  let selected-patches patches with [
+    number = tablenum
+  ]
+
+  ask selected-patches [
+    set occupied_group_num groupnum
+    set available? free?
+    set seat_taken? not free?
+  ]
+
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;      BACKUP     ;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+to spawn_customer
+  let currentPatch one-of patches with [object_type = "customer_spawnArea"]
+  ask currentPatch [
+    print currentPatch
+    sprout 1 [
+      set breed customer
+      set shape "person"
+      set color yellow
+      set size 2
+      set status "entering"
+      set eating_time 1000 + random 50
+      set waiting_time 1 + random 10
+      set found_table FALSE
+      set seat nobody
+      set happiness random 5 + 1  ; happiness random number from 1-5
+      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
+    ]
+  ]
+
+end
+
+to spawn_startCustomer [currentPatch]
+  ask currentPatch [
+    sprout 1 [
+      set breed customer
+      set shape "person"
+      set color yellow
+      set size 2
+      set status "entering"
+      set eating_time 1000 + random 50
+      set waiting_time 1 + random 50
+      set found_table FALSE
+      set seat nobody
+      set happiness random 5 + 1  ; happiness random number from 1-5
+      set preferred_table_type one-of ["near_window" "near_aircon" "near_cr"] ; preferred table type ;
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
